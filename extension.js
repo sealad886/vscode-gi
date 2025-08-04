@@ -22,22 +22,52 @@ function activate(context) {
                 const options = {
                     ignoreFocusOut: false,
                     placeHolder: 'Search Operating Systems, IDEs, or Programming Languages',
+                    canPickMany: true, // Enable multi-selection for gitignore templates
                 };
 
                 vscode.window.showQuickPick(formattedList, options)
                     .then(function (val) {
-                        if (val === undefined) {
+                        if (val === undefined || (Array.isArray(val) && val.length === 0)) {
                             vscode.window.setStatusBarMessage('gi escaped', 3000);
                             var err = new giError('EscapeException');
                             throw err;
                         }
-                        vscode.window.setStatusBarMessage('You picked ' + val, 3000);
-                        axios.get(giURL + val)
-                            .then(function (response) {
-                                makeFile(response.data);
+                        
+                        // Handle both single selection (backward compatibility) and multi-selection
+                        var selectedTemplates = Array.isArray(val) ? val : [val];
+                        var templateCount = selectedTemplates.length;
+                        
+                        if (templateCount === 1) {
+                            vscode.window.setStatusBarMessage('You picked ' + selectedTemplates[0], 3000);
+                        } else {
+                            vscode.window.setStatusBarMessage('You picked ' + templateCount + ' templates: ' + selectedTemplates.join(', '), 3000);
+                        }
+                        
+                        // Fetch content for all selected templates
+                        var templatePromises = selectedTemplates.map(function(template) {
+                            return axios.get(giURL + template);
+                        });
+                        
+                        // Wait for all template requests to complete
+                        Promise.all(templatePromises)
+                            .then(function(responses) {
+                                // Aggregate all .gitignore content from selected templates
+                                var aggregatedContent = responses.map(function(response, index) {
+                                    var template = selectedTemplates[index];
+                                    var content = response.data;
+                                    
+                                    // Add a header comment if multiple templates were selected
+                                    if (templateCount > 1) {
+                                        return '# ' + template + '\n' + content + '\n';
+                                    }
+                                    return content;
+                                }).join('\n');
+                                
+                                makeFile(aggregatedContent);
                             })
                             .catch(function (err) {
                                 console.log(err);
+                                vscode.window.showErrorMessage('Failed to fetch gitignore templates');
                             });
                     });
 

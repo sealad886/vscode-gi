@@ -15,9 +15,65 @@ var myExtension = require('../extension');
 
 // Defines a Mocha test suite to group tests of similar kind together
 suite("Extension Tests", function() {
-    // Defines a Mocha unit test
-    test("Something 1", function() {
-        assert.equal(-1, [1, 2, 3].indexOf(5));
-        assert.equal(-1, [1, 2, 3].indexOf(0));
+    // Test template selection handling logic
+    test("Template selection should handle single selection", function() {
+        var val = "node";
+        var selectedTemplates = Array.isArray(val) ? val : [val];
+        assert.equal(selectedTemplates.length, 1);
+        assert.equal(selectedTemplates[0], "node");
+    });
+    
+    test("Template selection should handle multi-selection", function() {
+        var val = ["node", "python", "java"];
+        var selectedTemplates = Array.isArray(val) ? val : [val];
+        assert.equal(selectedTemplates.length, 3);
+        assert.equal(selectedTemplates[0], "node");
+        assert.equal(selectedTemplates[1], "python");
+        assert.equal(selectedTemplates[2], "java");
+    });
+    
+    test("Template aggregation should add headers for multiple templates", function() {
+        var responses = [
+            { data: "# Node.js\nnode_modules/\n*.log" },
+            { data: "# Python\n__pycache__/\n*.pyc" }
+        ];
+        var selectedTemplates = ["node", "python"];
+        var templateCount = 2;
+        
+        var aggregatedContent = responses.map(function(response, index) {
+            var template = selectedTemplates[index];
+            var content = response.data;
+            
+            if (templateCount > 1) {
+                return '# ' + template + '\n' + content + '\n';
+            }
+            return content;
+        }).join('\n');
+        
+        assert.ok(aggregatedContent.includes('# node'));
+        assert.ok(aggregatedContent.includes('# python'));
+        assert.ok(aggregatedContent.includes('node_modules/'));
+        assert.ok(aggregatedContent.includes('__pycache__/'));
+    });
+    
+    test("Template aggregation should not add headers for single template", function() {
+        var responses = [
+            { data: "# Node.js\nnode_modules/\n*.log" }
+        ];
+        var selectedTemplates = ["node"];
+        var templateCount = 1;
+        
+        var aggregatedContent = responses.map(function(response, index) {
+            var template = selectedTemplates[index];
+            var content = response.data;
+            
+            if (templateCount > 1) {
+                return '# ' + template + '\n' + content + '\n';
+            }
+            return content;
+        }).join('\n');
+        
+        assert.equal(aggregatedContent, "# Node.js\nnode_modules/\n*.log");
+        assert.ok(!aggregatedContent.includes('# node\n#'));
     });
 });

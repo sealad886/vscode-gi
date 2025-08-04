@@ -61,7 +61,7 @@ function activate(context) {
                                         return '# ' + template + '\n' + content + '\n';
                                     }
                                     return content;
-                                }).join('\n');
+                                }).join('');
                                 
                                 makeFile(aggregatedContent);
                             })

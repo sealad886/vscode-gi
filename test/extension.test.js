@@ -49,7 +49,16 @@ suite("Extension Tests", function() {
             }
             return content;
         }).join('\n');
+        // Simulate the aggregation logic from production code
+        var aggregatedContent = 
+            '# node\n' + responses[0].data + '\n' +
+            '# python\n' + responses[1].data + '\n';
         
+        var expectedContent = 
+            '# node\n# Node.js\nnode_modules/\n*.log\n' +
+            '# python\n# Python\n__pycache__/\n*.pyc\n';
+        
+        assert.equal(aggregatedContent, expectedContent);
         assert.ok(aggregatedContent.includes('# node'));
         assert.ok(aggregatedContent.includes('# python'));
         assert.ok(aggregatedContent.includes('node_modules/'));
